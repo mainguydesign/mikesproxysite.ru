@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: black;
+            color: white;
+        }
+
+        #lockscreen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        #password {
+            width: 250px;
+            padding: 10px;
+            font-size: 16px;
+        }
+
+        #message {
+            margin-top: 10px;
+            color: red;
+        }
+
+        #lockedScreen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: darkred;
+            color: white;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            font-size: 22px;
+            text-align: center;
+        }
+
+        #timer {
+            margin-top: 10px;
+        }
+
+        #recoveryBox {
+            display: none;
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+        }
+
+        #overrideScreen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #c8facc;
+            color: #0a3d1a;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+        }
+
+        #main {
+            display: none;
+            padding: 20px;
+            background: #111;
+            min-height: 100vh;
+        }
+
+        #search {
+            width: 100%;
+            max-width: 400px;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+
+        .folder {
+            background: #222;
+            padding: 12px;
+            margin: 8px 0;
+        }
+
+        .link-item {
+            display: block;
+            color: lightblue;
+            margin: 5px 0;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .highlight {
+            background: yellow;
+            color: black;
+        }
+    </style>
+</head>
+
+<body>
+
+<div id="lockscreen">
+    <input id="password" placeholder="Enter password">
+    <div id="message"></div>
+</div>
+
+<div id="lockedScreen">
+    <div>ACCESS DENIED</div>
+    <div>FOR 10 MINUTES</div>
+    <div id="timer"></div>
+</div>
+
+<div id="recoveryBox">
+    <input id="recoveryPassword" placeholder="recovery...">
+</div>
+
+<div id="overrideScreen">
+    DEFENSE MECHANISM DEACTIVATED
+</div>
+
+<div id="main">
+    <input id="search" placeholder="Search...">
+
+    <div class="folder">Games</div>
+    <div>
+        <a class="link-item" href="#">Minecraft</a>
+        <a class="link-item" href="#">Roblox</a>
+        <a class="link-item" href="#">Terraria</a>
+    </div>
+</div>
+
+<script>
+const correctPassword = "superiorsiteowner";
+const recoveryPassword = "superiorlakeemerald";
+
+const maxAttempts = 5;
+const lockTime = 10 * 60 * 1000;
+
+let attempts = Number(localStorage.getItem("attempts")) || 0;
+let lockUntil = Number(localStorage.getItem("lockUntil")) || 0;
+
+const msg = document.getElementById("message");
+const lockedScreen = document.getElementById("lockedScreen");
+const timer = document.getElementById("timer");
+const recoveryBox = document.getElementById("recoveryBox");
+const recoveryInput = document.getElementById("recoveryPassword");
+const overrideScreen = document.getElementById("overrideScreen");
+
+function updateLock() {
+    let remaining = lockUntil - Date.now();
+
+    if (remaining > 0) {
+        document.getElementById("lockscreen").style.display = "none";
+        lockedScreen.style.display = "flex";
+        recoveryBox.style.display = "block";
+
+        timer.textContent = "Time remaining: " + Math.ceil(remaining / 1000) + "s";
+
+        setTimeout(updateLock, 1000);
+    } else {
+        localStorage.clear();
+        lockedScreen.style.display = "none";
+        recoveryBox.style.display = "none";
+        document.getElementById("lockscreen").style.display = "flex";
+    }
+}
+
+document.getElementById("password").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        if (Date.now() < lockUntil) {
+            updateLock();
+            return;
+        }
+
+        if (this.value === correctPassword) {
+            document.getElementById("lockscreen").style.display = "none";
+            document.getElementById("main").style.display = "block";
+        } else {
+            attempts++;
+            localStorage.setItem("attempts", attempts);
+
+            if (attempts >= maxAttempts) {
+                lockUntil = Date.now() + lockTime;
+                localStorage.setItem("lockUntil", lockUntil);
+                updateLock();
+            } else {
+                msg.textContent = "Wrong password (" + attempts + "/" + maxAttempts + ")";
+            }
+
+            this.value = "";
+        }
+    }
+});
+
+recoveryInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter" && this.value === recoveryPassword) {
+        localStorage.clear();
+        lockedScreen.style.display = "none";
+        recoveryBox.style.display = "none";
+
+        overrideScreen.style.display = "flex";
+
+        setTimeout(() => {
+            overrideScreen.style.display = "none";
+            document.getElementById("lockscreen").style.display = "flex";
+        }, 10000);
+    }
+});
+
+document.getElementById("search").addEventListener("input", function() {
+    let value = this.value.toLowerCase();
+    let links = document.querySelectorAll(".link-item");
+
+    links.forEach(link => {
+        let text = link.textContent;
+
+        if (!value) {
+            link.innerHTML = text;
+            link.classList.remove("hidden");
+            return;
+        }
+
+        let lower = text.toLowerCase();
+
+        if (lower.includes(value)) {
+            link.classList.remove("hidden");
+
+            let i = lower.indexOf(value);
+
+            link.innerHTML =
+                text.substring(0, i) +
+                "<span class='highlight'>" +
+                text.substring(i, i + value.length) +
+                "</span>" +
+                text.substring(i + value.length);
+        } else {
+            link.classList.add("hidden");
+        }
+    });
+});
+</script>
+
+</body>
+</html>
